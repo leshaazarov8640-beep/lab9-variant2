@@ -1,0 +1,12 @@
+[package]
+name = "rust-image-processor"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "image_processor"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.20", features = ["extension-module"] }
+image = "0.24"
