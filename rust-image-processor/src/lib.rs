@@ -1,5 +1,7 @@
 use pyo3::prelude::*;
+use pyo3::types::PyBytes;
 use image::DynamicImage;
+use std::io::Cursor;
 
 #[pyfunction]
 fn load_image_from_bytes(py: Python, image_bytes: Vec<u8>) -> PyResult<PyObject> {
@@ -12,12 +14,10 @@ fn load_image_from_bytes(py: Python, image_bytes: Vec<u8>) -> PyResult<PyObject>
     let (height, width) = (rgb_img.height() as usize, rgb_img.width() as usize);
     let data = rgb_img.into_raw();
     
-    Python::with_gil(|py| {
-        let numpy = py.import("numpy")?;
-        let array = numpy.call_method1("array", (data,))?;
-        let shaped = array.call_method1("reshape", (height, width, 3))?;
-        Ok(shaped.to_object(py))
-    })
+    let numpy = py.import("numpy")?;
+    let array = numpy.call_method1("array", (data,))?;
+    let shaped = array.call_method1("reshape", (height, width, 3))?;
+    Ok(shaped.to_object(py))
 }
 
 #[pyfunction]
@@ -27,16 +27,14 @@ fn resize_image(py: Python, image_bytes: Vec<u8>, width: u32, height: u32) -> Py
         Err(e) => return Err(pyo3::exceptions::PyIOError::new_err(e.to_string())),
     };
     
-    let resized = img.resize(width, height, image::imageops::FilterType::Lanczos3);
+    let resized = img.resize_exact(width, height, image::imageops::FilterType::Lanczos3);
     let rgb_img = resized.to_rgb8();
     let data = rgb_img.into_raw();
     
-    Python::with_gil(|py| {
-        let numpy = py.import("numpy")?;
-        let array = numpy.call_method1("array", (data,))?;
-        let shaped = array.call_method1("reshape", (height as usize, width as usize, 3))?;
-        Ok(shaped.to_object(py))
-    })
+    let numpy = py.import("numpy")?;
+    let array = numpy.call_method1("array", (data,))?;
+    let shaped = array.call_method1("reshape", (height as usize, width as usize, 3))?;
+    Ok(shaped.to_object(py))
 }
 
 #[pyfunction]
@@ -51,12 +49,10 @@ fn to_grayscale(py: Python, image_bytes: Vec<u8>) -> PyResult<PyObject> {
     let (height, width) = (gray_img.height() as usize, gray_img.width() as usize);
     let data = gray_img.into_raw();
     
-    Python::with_gil(|py| {
-        let numpy = py.import("numpy")?;
-        let array = numpy.call_method1("array", (data,))?;
-        let shaped = array.call_method1("reshape", (height, width))?;
-        Ok(shaped.to_object(py))
-    })
+    let numpy = py.import("numpy")?;
+    let array = numpy.call_method1("array", (data,))?;
+    let shaped = array.call_method1("reshape", (height, width))?;
+    Ok(shaped.to_object(py))
 }
 
 #[pyfunction]
@@ -77,12 +73,10 @@ fn rotate_image(py: Python, image_bytes: Vec<u8>, angle: i32) -> PyResult<PyObje
     let (height, width) = (rgb_img.height() as usize, rgb_img.width() as usize);
     let data = rgb_img.into_raw();
     
-    Python::with_gil(|py| {
-        let numpy = py.import("numpy")?;
-        let array = numpy.call_method1("array", (data,))?;
-        let shaped = array.call_method1("reshape", (height, width, 3))?;
-        Ok(shaped.to_object(py))
-    })
+    let numpy = py.import("numpy")?;
+    let array = numpy.call_method1("array", (data,))?;
+    let shaped = array.call_method1("reshape", (height, width, 3))?;
+    Ok(shaped.to_object(py))
 }
 
 #[pyfunction]
