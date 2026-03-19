@@ -12,22 +12,26 @@ import (
     "time"
 )
 
+// Структура задачи (Задание 2)
 type Task struct {
     ID        int
     Data      []byte
     CreatedAt time.Time
 }
 
+// Очередь задач и результаты
 var taskQueue = make(chan Task, 100)
 var taskCounter int
 var mu sync.Mutex
 var results = make(map[int][]byte)
 
+// Горутина для фоновой обработки (Задание 2)
 func backgroundWorker() {
     for task := range taskQueue {
         log.Printf("Worker: processing task %d", task.ID)
         time.Sleep(2 * time.Second)
         
+        // Обработка данных (инверсия битов)
         processed := make([]byte, len(task.Data))
         for i, b := range task.Data {
             processed[i] = ^b
@@ -36,9 +40,12 @@ func backgroundWorker() {
         mu.Lock()
         results[task.ID] = processed
         mu.Unlock()
+        
+        log.Printf("Worker: completed task %d", task.ID)
     }
 }
 
+// Структуры для JSON (Задание 4)
 type NumbersInput struct {
     Numbers []int `json:"numbers"`
 }
@@ -47,6 +54,7 @@ type SumOutput struct {
     Sum int `json:"sum"`
 }
 
+// Эндпоинт для отправки задачи
 func handleProcess(w http.ResponseWriter, r *http.Request) {
     if r.Method != http.MethodPost {
         http.Error(w, "Only POST allowed", http.StatusMethodNotAllowed)
@@ -71,6 +79,7 @@ func handleProcess(w http.ResponseWriter, r *http.Request) {
         CreatedAt: time.Now(),
     }
 
+    // Возвращаем ID задачи в бинарном формате
     response := make([]byte, 8)
     binary.LittleEndian.PutUint64(response, uint64(taskID))
     w.Header().Set("Content-Type", "application/octet-stream")
@@ -78,6 +87,7 @@ func handleProcess(w http.ResponseWriter, r *http.Request) {
     w.Write(response)
 }
 
+// Эндпоинт для получения результата
 func handleResult(w http.ResponseWriter, r *http.Request) {
     if r.Method != http.MethodGet {
         http.Error(w, "Only GET allowed", http.StatusMethodNotAllowed)
@@ -98,7 +108,7 @@ func handleResult(w http.ResponseWriter, r *http.Request) {
     mu.Unlock()
 
     if !exists {
-        http.Error(w, "Task not found or not completed", http.StatusNotFound)
+        http.Error(w, "Task not found", http.StatusNotFound)
         return
     }
 
@@ -107,8 +117,10 @@ func handleResult(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+    // Задание 4: Проверка режима JSON через stdin
     stat, _ := os.Stdin.Stat()
     if (stat.Mode() & os.ModeCharDevice) == 0 {
+        // Режим подпроцесса - обрабатываем JSON
         var input NumbersInput
         err := json.NewDecoder(os.Stdin).Decode(&input)
         if err != nil {
@@ -124,6 +136,7 @@ func main() {
         return
     }
 
+    // Задание 2: Запуск HTTP сервера с горутиной
     go backgroundWorker()
     
     http.HandleFunc("/process", handleProcess)
