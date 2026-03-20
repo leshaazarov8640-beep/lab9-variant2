@@ -1,5 +1,5 @@
 import timeit
-import rust_fibonacci
+import rust_math as rust_fibonacci
 import image_processor
 import requests
 import json
@@ -57,16 +57,16 @@ def fib_python_recursive(n):
 
 print("\n   Рекурсивный метод (n=35, 5 итераций):")
 # Python рекурсивно
-py_time = timeit.timeit(lambda: fib_python_recursive(35), number=5)
-print(f"   Python (рекурсия): {py_time:.4f} сек")
+py_time_recursive = timeit.timeit(lambda: fib_python_recursive(35), number=5)
+print(f"   Python (рекурсия): {py_time_recursive:.4f} сек")
 
 # Rust рекурсивно
-rust_time = timeit.timeit(lambda: rust_fibonacci.fibonacci_recursive(35), number=5)
-print(f"   Rust (рекурсия):   {rust_time:.4f} сек")
-print(f"   Ускорение:         {py_time/rust_time:.2f}x")
+rust_time_recursive = timeit.timeit(lambda: rust_fibonacci.fibonacci_recursive(35), number=5)
+print(f"   Rust (рекурсия):   {rust_time_recursive:.4f} сек")
+print(f"   Ускорение:         {py_time_recursive/rust_time_recursive:.2f}x")
 
 print("\n   Итеративный метод (n=90, 10000 итераций):")
-# Python итеративно (n=90 - безопасное значение)
+# Python итеративно
 def fib_python_iterative(n):
     if n <= 1:
         return n
@@ -75,13 +75,13 @@ def fib_python_iterative(n):
         a, b = b, a + b
     return b
 
-py_time = timeit.timeit(lambda: fib_python_iterative(90), number=10000)
-print(f"   Python: {py_time:.4f} сек")
+py_time_iterative = timeit.timeit(lambda: fib_python_iterative(90), number=10000)
+print(f"   Python: {py_time_iterative:.4f} сек")
 
-# Rust итеративно (n=90)
-rust_time = timeit.timeit(lambda: rust_fibonacci.fibonacci_iterative(90), number=10000)
-print(f"   Rust:   {rust_time:.4f} сек")
-print(f"   Ускорение: {py_time/rust_time:.2f}x")
+# Rust итеративно
+rust_time_iterative = timeit.timeit(lambda: rust_fibonacci.fibonacci_iterative(90), number=10000)
+print(f"   Rust:   {rust_time_iterative:.4f} сек")
+print(f"   Ускорение: {py_time_iterative/rust_time_iterative:.2f}x")
 
 # Демонстрация безопасной версии
 print("\n   Безопасная версия (проверка границ):")
@@ -111,20 +111,23 @@ def rust_grayscale():
     return image_processor.to_grayscale(img_bytes)
 
 # Изменение размера
-print("\n   Изменение размера (512x512 -> 128x128):")
-rust_time = timeit.timeit(rust_resize, number=50)
-pil_time = timeit.timeit(pil_resize, number=50)
-print(f"   PIL:  {pil_time:.4f} сек")
-print(f"   Rust: {rust_time:.4f} сек")
-print(f"   Ускорение: {pil_time/rust_time:.2f}x")
+print("\n   Изменение размера (600x400 -> 128x128):")
+print("   Примечание: Rust медленнее из-за декодирования JPEG при каждом вызове")
+rust_time_resize = timeit.timeit(rust_resize, number=50)
+pil_time_resize = timeit.timeit(pil_resize, number=50)
+print(f"   PIL:  {pil_time_resize:.4f} сек")
+print(f"   Rust: {rust_time_resize:.4f} сек")
+if pil_time_resize > 0 and rust_time_resize > 0:
+    print(f"   Отношение: {rust_time_resize/pil_time_resize:.2f}x (Rust медленнее)")
 
 # Grayscale
 print("\n   Конвертация в grayscale:")
-rust_time = timeit.timeit(rust_grayscale, number=50)
-pil_time = timeit.timeit(pil_grayscale, number=50)
-print(f"   PIL:  {pil_time:.4f} сек")
-print(f"   Rust: {rust_time:.4f} сек")
-print(f"   Ускорение: {pil_time/rust_time:.2f}x")
+rust_time_grayscale = timeit.timeit(rust_grayscale, number=50)
+pil_time_grayscale = timeit.timeit(pil_grayscale, number=50)
+print(f"   PIL:  {pil_time_grayscale:.4f} сек")
+print(f"   Rust: {rust_time_grayscale:.4f} сек")
+if pil_time_grayscale > 0 and rust_time_grayscale > 0:
+    print(f"   Отношение: {rust_time_grayscale/pil_time_grayscale:.2f}x (Rust медленнее)")
 
 # ========== ТЕСТ 3: JSON ОБРАБОТКА ==========
 print("\n4. JSON ОБРАБОТКА (100 итераций)")
@@ -135,25 +138,45 @@ data = {"numbers": list(range(1000))}
 def json_python():
     return json.dumps(data)
 
-py_time = timeit.timeit(json_python, number=100)
-print(f"   Чистый Python: {py_time:.4f} сек")
+py_time_json = timeit.timeit(json_python, number=100)
+print(f"   Чистый Python: {py_time_json:.4f} сек")
 
 # Go подпроцесс
 def json_go():
-    go_exe = os.path.abspath("../go-server/go-server.exe")
+    # Пробуем разные возможные имена бинарника
+    go_exe_candidates = [
+        os.path.abspath("../go-server/calculator.exe"),
+        os.path.abspath("../go-server/go-server.exe"),
+        os.path.abspath("../go-server/server.exe")
+    ]
+    
+    go_exe = None
+    for candidate in go_exe_candidates:
+        if os.path.exists(candidate):
+            go_exe = candidate
+            break
+    
+    if go_exe is None:
+        print(f"   ⚠️ Go бинарник не найден, пропускаем тест")
+        return b'{"sum":0}'
+    
     test_data = json.dumps({"numbers": [1, 2, 3, 4, 5]})
-    proc = subprocess.Popen(
-        [go_exe],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
-    )
-    out, _ = proc.communicate(test_data.encode())
-    return out
+    try:
+        proc = subprocess.Popen(
+            [go_exe],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=5
+        )
+        out, _ = proc.communicate(test_data.encode())
+        return out
+    except Exception as e:
+        print(f"   ⚠️ Ошибка при запуске Go: {e}")
+        return b'{"sum":0}'
 
-# Для Go делаем меньше итераций из-за накладных расходов
-go_time = timeit.timeit(json_go, number=10)
-print(f"   Python+Go: {go_time:.4f} сек (10 итераций)")
+go_time_json = timeit.timeit(json_go, number=10)
+print(f"   Python+Go: {go_time_json:.4f} сек (10 итераций)")
 
 # ========== ТЕСТ 4: ПРОСТЫЕ ЧИСЛА (Python) ==========
 print("\n5. ПРОСТЫЕ ЧИСЛА (Python)")
@@ -167,9 +190,8 @@ def primes_python(limit=100000):
                 sieve[j] = False
     return [i for i, is_prime in enumerate(sieve) if is_prime]
 
-# Python
-py_time = timeit.timeit(lambda: primes_python(100000), number=10)
-print(f"   Python: {py_time:.4f} сек (10 итераций)")
+py_time_primes = timeit.timeit(lambda: primes_python(100000), number=10)
+print(f"   Python: {py_time_primes:.4f} сек (10 итераций)")
 
 # ========== ДОПОЛНИТЕЛЬНО: ТЕСТ КЭША ==========
 print("\n6. ТЕСТ КЭША FIBONACCI")
@@ -183,13 +205,16 @@ def rust_fib_with_cache():
     return cache.get(50)
 
 # Прогреваем кэш
-cache.get(50)
+try:
+    cache.get(50)
+except:
+    pass
 
-py_time = timeit.timeit(python_fib_without_cache, number=1000)
-rust_time = timeit.timeit(rust_fib_with_cache, number=1000)
-print(f"   Python без кэша: {py_time:.4f} сек")
-print(f"   Rust с кэшем:    {rust_time:.4f} сек")
-print(f"   Ускорение:       {py_time/rust_time:.2f}x")
+py_time_cache = timeit.timeit(python_fib_without_cache, number=1000)
+rust_time_cache = timeit.timeit(rust_fib_with_cache, number=1000)
+print(f"   Python без кэша: {py_time_cache:.4f} сек")
+print(f"   Rust с кэшем:    {rust_time_cache:.4f} сек")
+print(f"   Ускорение:       {py_time_cache/rust_time_cache:.2f}x")
 
 # ========== ИТОГОВАЯ ТАБЛИЦА ==========
 print("\n" + "=" * 70)
@@ -197,16 +222,10 @@ print("ИТОГОВАЯ ТАБЛИЦА ПРОИЗВОДИТЕЛЬНОСТИ")
 print("=" * 70)
 print("| Задача                  | Python  | Rust    | Go      |")
 print("|-------------------------|---------|---------|---------|")
-print(f"| Фибоначчи (рекурсия)    | {py_time:.2f}с   | {rust_time:.2f}с   | -       |")
-print("| Фибоначчи (итеративно)  | 0.07с   | 0.01с   | -       |")
-print("| Изменение размера        | 5.67с   | 1.23с   | -       |")
-print("| Grayscale                | 2.34с   | 0.56с   | -       |")
-print("| JSON (100 итераций)      | 0.03с   | -       | 1.23с   |")
-print("| Простые числа (100k)     | 1.23с   | -       | -       |")
-print("=" * 70)
-print("\n✅ Бенчмарк завершен!")
-print("\nВыводы:")
-print("• Rust быстрее Python в рекурсивных вычислениях до 20 раз")
-print("• Rust эффективнее PIL в обработке изображений в 4-5 раз")
-print("• Go подпроцесс имеет накладные расходы на запуск")
-print("• Кэширование в Rust ускоряет повторные вычисления в сотни раз")
+print(f"| Фибоначчи (рекурсия)    | {py_time_recursive:.2f}с   | {rust_time_recursive:.2f}с   | -       |")
+print(f"| Фибоначчи (итеративно)  | {py_time_iterative:.2f}с   | {rust_time_iterative:.2f}с   | -       |")
+print(f"| Изменение размера        | {pil_time_resize:.2f}с   | {rust_time_resize:.2f}с   | -       |")
+print(f"| Grayscale                | {pil_time_grayscale:.2f}с   | {rust_time_grayscale:.2f}с   | -       |")
+print(f"| JSON (100 итераций)      | {py_time_json:.2f}с   | -       | {go_time_json:.2f}с   |")
+print(f"| Простые числа (100k)     | {py_time_primes:.2f}с   | -       | -       |")
+print(f"| Кэш Fibonacci (n=50)     | {py_time_cache:.2f}с   | {rust_time_cache:.2f}с   | -       |")

@@ -1,5 +1,5 @@
 import pytest
-import rust_fibonacci
+import rust_math as rust_fibonacci
 
 def test_fibonacci_recursive():
     assert rust_fibonacci.fibonacci_recursive(0) == 0
