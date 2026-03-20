@@ -1,7 +1,6 @@
 use pyo3::prelude::*;
 use std::collections::HashMap;
 
-// Функция 1: Рекурсивный Фибоначчи
 #[pyfunction]
 fn fibonacci_recursive(n: u32) -> u64 {
     match n {
@@ -11,7 +10,6 @@ fn fibonacci_recursive(n: u32) -> u64 {
     }
 }
 
-// Функция 2: Итеративный Фибоначчи с проверкой переполнения
 #[pyfunction]
 fn fibonacci_iterative(n: u32) -> PyResult<u64> {
     match n {
@@ -38,7 +36,6 @@ fn fibonacci_iterative(n: u32) -> PyResult<u64> {
     }
 }
 
-// Безопасная версия (возвращает None при переполнении)
 #[pyfunction]
 fn fibonacci_safe(n: u32) -> Option<u64> {
     match n {
@@ -61,7 +58,6 @@ fn fibonacci_safe(n: u32) -> Option<u64> {
     }
 }
 
-// Структура с кэшем (экспортируется как класс Python)
 #[pyclass]
 struct FibonacciCache {
     cache: HashMap<u32, u64>,
@@ -100,12 +96,39 @@ impl FibonacciCache {
     }
 }
 
-// Регистрация модуля
 #[pymodule]
-fn rust_fibonacci(_py: Python, m: &PyModule) -> PyResult<()> {
+fn rust_math(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(fibonacci_recursive, m)?)?;
     m.add_function(wrap_pyfunction!(fibonacci_iterative, m)?)?;
     m.add_function(wrap_pyfunction!(fibonacci_safe, m)?)?;
     m.add_class::<FibonacciCache>()?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_fibonacci_recursive() {
+        assert_eq!(fibonacci_recursive(0), 0);
+        assert_eq!(fibonacci_recursive(1), 1);
+        assert_eq!(fibonacci_recursive(10), 55);
+    }
+
+    #[test]
+    fn test_fibonacci_iterative() {
+        assert_eq!(fibonacci_iterative(0).unwrap(), 0);
+        assert_eq!(fibonacci_iterative(1).unwrap(), 1);
+        assert_eq!(fibonacci_iterative(10).unwrap(), 55);
+    }
+
+    #[test]
+    fn test_fibonacci_safe() {
+        assert_eq!(fibonacci_safe(0), Some(0));
+        assert_eq!(fibonacci_safe(1), Some(1));
+        assert_eq!(fibonacci_safe(10), Some(55));
+        assert_eq!(fibonacci_safe(93), Some(12200160415121876738));
+        assert_eq!(fibonacci_safe(94), None);
+    }
 }
